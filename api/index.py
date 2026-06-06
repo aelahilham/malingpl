@@ -8,15 +8,20 @@ app = Flask(__name__)
 def get_playlist(path):
     # --- MASUKIN LINK HTTP TOOLKIT LO DI BAWAH INI ---
     playlists = [
-        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
-        {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
-        {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORTS NEW"}
+        {"url": "LINK_HTTP_TOOLKIT_VISION_PLUS", "group": "VISION+"},
+        {"url": "LINK_HTTP_TOOLKIT_EVEN", "group": "EVENT"},
+        {"url": "LINK_HTTP_TOOLKIT_TV_CHANNEL", "group": "TV CHANNEL"},
+        {"url": "LINK_HTTP_TOOLKIT_VISION_PLUS", "group": "INDIHOME"},
+        {"url": "LINK_HTTP_TOOLKIT_EVEN", "group": "TVRI CHANNEL"},
+        {"url": "LINK_HTTP_TOOLKIT_TV_CHANNEL", "group": "EVENT+"},
+        {"url": "LINK_HTTP_TOOLKIT_VISION_PLUS", "group": "SPORTS NEW"},
+        {"url": "LINK_HTTP_TOOLKIT_EVEN", "group": "OLAHRAGA"},
+        {"url": "LINK_HTTP_TOOLKIT_TV_CHANNEL", "group": "DENS"}
     ]
     # -------------------------------------------------
 
     merged_content = "#EXTM3U\n"
     
-    # Penyamaran sebagai HP Android agar tidak diblokir server OTT
     headers = {
         "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
         "Accept": "*/*"
@@ -26,8 +31,10 @@ def get_playlist(path):
         try:
             response = requests.get(pl["url"], headers=headers, timeout=10)
             
-            # Kalau sukses ditarik
             if response.status_code == 200:
+                # ---> FIX 1: Paksa Python baca hasil tarikan sebagai UTF-8
+                response.encoding = 'utf-8'
+                
                 lines = response.text.splitlines()
                 for line in lines:
                     if line.startswith("#EXTM3U"):
@@ -39,6 +46,7 @@ def get_playlist(path):
                     
                     merged_content += line + "\n"
         except Exception:
-            pass # Kalau satu link gagal/error, biarkan lanjut ke link berikutnya
+            pass 
 
-    return Response(merged_content, mimetype='audio/mpegurl')
+    # ---> FIX 2: Kasih tau aplikasi IPTV lo kalo output ini formatnya UTF-8
+    return Response(merged_content, mimetype='audio/mpegurl; charset=utf-8')
