@@ -8,15 +8,15 @@ app = Flask(__name__)
 def get_playlist(path):
     # --- MASUKIN LINK HTTP TOOLKIT LO DI BAWAH INI ---
     playlists = [
-        {"url": "LINK_HTTP_TOOLKIT_VISION_PLUS", "group": "VISION+"},
-        {"url": "LINK_HTTP_TOOLKIT_EVEN", "group": "EVENT"},
-        {"url": "LINK_HTTP_TOOLKIT_TV_CHANNEL", "group": "TV CHANNEL"},
-        {"url": "LINK_HTTP_TOOLKIT_VISION_PLUS", "group": "INDIHOME"},
-        {"url": "LINK_HTTP_TOOLKIT_EVEN", "group": "TVRI CHANNEL"},
-        {"url": "LINK_HTTP_TOOLKIT_TV_CHANNEL", "group": "EVENT+"},
-        {"url": "LINK_HTTP_TOOLKIT_VISION_PLUS", "group": "SPORTS NEW"},
-        {"url": "LINK_HTTP_TOOLKIT_EVEN", "group": "OLAHRAGA"},
-        {"url": "LINK_HTTP_TOOLKIT_TV_CHANNEL", "group": "DENS"}
+        {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
+        {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIHOME"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
+        {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORTS NEW"},
+        {"url": "https://enakmalinggo.blog/maling/logo.php", "group": "OLAHRAGA"},
+        {"url": "https://enakmalinggo.blog/maling/dens.php", "group": "DENS"}
     ]
     # -------------------------------------------------
 
