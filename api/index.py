@@ -14,6 +14,7 @@ def get_playlist(path):
         {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIHOME"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
         {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
+        {"url": "https://ayo.maling.pl/sawitku.m3u", "group": "EVENT SAWIT"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORTS NEW"},
         {"url": "https://enakmalinggo.blog/maling/logo.php", "group": "OLAHRAGA"},
         {"url": "https://enakmalinggo.blog/maling/dens.php", "group": "DENS"}
