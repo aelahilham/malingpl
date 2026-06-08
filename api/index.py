@@ -9,13 +9,15 @@ def get_playlist(path):
     # --- MASUKIN LINK PLAYLIST LO DI BAWAH INI ---
     playlists = [
         {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
-        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
-        {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIHOME"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
+        {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
+        {"url": "https://malingya.goblogtv.workers.dev", "group": "LIVE AUTO II"},
         {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
         {"url": "https://ayo.maling.pl/sawitku.m3u", "group": "EVENT SAWIT"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORTS NEW"},
+        {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIHOME"},
         {"url": "https://enakmalinggo.blog/maling/logo.php", "group": "OLAHRAGA"},
         {"url": "https://enakmalinggo.blog/maling/dens.php", "group": "DENS"}
     ]
