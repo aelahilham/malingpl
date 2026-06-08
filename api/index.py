@@ -6,7 +6,7 @@ app = Flask(__name__)
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def get_playlist(path):
-    # --- MASUKIN LINK HTTP TOOLKIT LO DI BAWAH INI ---
+    # --- MASUKIN LINK PLAYLIST LO DI BAWAH INI ---
     playlists = [
         {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
