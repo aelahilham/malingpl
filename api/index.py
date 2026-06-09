@@ -24,7 +24,7 @@ def get_playlist(path):
     # -------------------------------------------------
 
     merged_content = "#EXTM3U\n"
-    seen_urls = set()  # ---> UBAHAN: Variabel buat nginget URL yang udah masuk
+    seen_urls = set()
     
     headers = {
         "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
@@ -37,12 +37,28 @@ def get_playlist(path):
             
             if response.status_code == 200:
                 response.encoding = 'utf-8'
-                lines = response.text.splitlines()
+                raw_lines = response.text.splitlines()
+                
+                # ---> UBAHAN: Pre-processing untuk menyatukan baris yang terputus <---
+                lines = []
+                for line in raw_lines:
+                    cleaned_line = line.strip()
+                    if not cleaned_line:
+                        continue
+                    
+                    # Deteksi apakah baris ini adalah awal tag M3U atau merupakan link streaming
+                    if cleaned_line.startswith("#") or cleaned_line.startswith("http") or "://" in cleaned_line:
+                        lines.append(line)
+                    else:
+                        # Jika tidak diawali tanda di atas, berarti ini adalah teks base64/nama channel yang terpotong
+                        if lines:
+                            lines[-1] += line  # Gabungkan kembali tanpa menghilangkan spasi
+                # ---------------------------------------------------------------------
                 
                 current_extinf = ""
                 
                 for line in lines:
-                    line = line.strip()
+                    line = line.strip() # Sekarang aman untuk di-strip karena baris sudah digabung utuh
                     if not line:
                         continue
                         
@@ -67,7 +83,7 @@ def get_playlist(path):
                         # Reset untuk channel berikutnya
                         current_extinf = ""
                         
-                    # Handle tag tambahan IPTV (misal: #EXTVLCOPT)
+                    # Handle tag tambahan IPTV (misal: #EXTVLCOPT, #KODIPROP)
                     elif line.startswith("#") and current_extinf:
                         current_extinf += "\n" + line
                         
@@ -75,3 +91,6 @@ def get_playlist(path):
             pass 
 
     return Response(merged_content, mimetype='audio/mpegurl; charset=utf-8')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
