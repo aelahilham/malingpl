@@ -34,15 +34,18 @@ def fetch_playlist(url):
 @app.route('/<path:path>')
 def get_playlist(path):
     playlists = [
-        {"url": "http://liveloveyou.my.id/4385eac8/ux.html", "group": "LIVE TV NEW"},
-        {"url": "http://liveloveyou.my.id/4385eac8/pelme1.html", "group": "LIVE TV"},
-        {"url": "http://liveloveyou.my.id/4385eac8/lv.txt", "group": "LIVE EVENT AUTO"},
-        {"url": "https://gvision-web.vercel.app/nw/piIdun.html", "group": "PIALA DUNIA 2026"},
-        {"url": "http://liveloveyou.my.id/tesr/belum.html", "group": "JADWAL EVENT AUTO"},
-        {"url": "http://liveloveyou.my.id/4385eac8/pelme2.html", "group": "LIVE EVENT MANUAL"},
-        {"url": "http://liveloveyou.my.id/4385eac8/pelme3.html", "group": "SPORTS"},
-        {"url": "http://liveloveyou.my.id/4385eac8/pelme4.html", "group": "TV LUAR NEGERI"},
-        {"url": "http://gvision-web.vercel.app/dio.txt", "group": "RADIO"}
+        {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
+        {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
+        {"url": "https://malingya.goblogtv.workers.dev", "group": "LIVE AUTO II"},
+        {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
+        {"url": "https://ayo.maling.pl/sawitku.m3u", "group": "EVENT SAWIT"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORTS NEW"},
+        {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIHOME"},
+        {"url": "https://enakmalinggo.blog/maling/logo.php", "group": "OLAHRAGA"},
+        {"url": "https://enakmalinggo.blog/maling/dens.php", "group": "DENS"}
     ]
 
     merged_content = "#EXTM3U\n"
