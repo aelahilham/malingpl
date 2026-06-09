@@ -1,8 +1,10 @@
 {
-  "rewrites": [
-    {
-      "source": "/playlist.m3u",
-      "destination": "/api/index.py"
-    }
+  "version": 2,
+  "builds": [
+    { "src": "app.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/logos/(.*)", "dest": "/logos/$1" },
+    { "src": "/(.*)", "dest": "app.py" }
   ]
 }
