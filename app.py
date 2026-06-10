@@ -36,7 +36,7 @@ def get_playlist(path):
         {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
         {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
-        {"url": "https://malingya.goblogtv.workers.dev/", "group": "LIVE AUTO II},
+        {"url": "https://malingya.goblogtv.workers.dev/", "group": "LIVE AUTO II"},
         {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
         {"url": "https://enakmalinggo.blog/maling/93.php", "group": "LIVE TV"},
         {"url": "https://ayomalinggo.blog/maling/Nweb.php?action=m3u", "group": "SPORT ARB"},
