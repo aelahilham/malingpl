@@ -48,7 +48,7 @@ def get_playlist(path):
         {"url": "https://ayo.maling.pl/Rak/1.php", "group": "AUTO 2 SPORT"},
         {"url": "https://ayomalinggo.blog/maling/TOKEN/sbs_m3u.php", "group": "WORLD CUP 2026"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
-        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "TV CHANNEL"}
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"}
     ]
 
     merged_content = "#EXTM3U\n"
