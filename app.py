@@ -113,11 +113,11 @@ def get_playlist(path):
                     
             elif not line.startswith("#"):
                 stream_url = line 
-                # Bypass semua stream_url langsung masuk tanpa cek duplikat
+                
+                # Jahit info channel dengan link, tanpa di-reset info channelnya
+                # biar kalau ada link cadangan tetep masuk dengan nama yang sama
                 if current_extinf:
                     merged_content += current_extinf + "\n" + stream_url + "\n"
-                
-                current_extinf = ""
                 
             elif line.startswith("#") and current_extinf:
                 current_extinf += "\n" + line
