@@ -47,7 +47,6 @@ def get_playlist(path):
         {"url": "https://thth.dasarweddus.workers.dev/", "group": "AUTO 1 SPORT"},
         {"url": "https://ayo.maling.pl/Rak/1.php", "group": "AUTO 2 SPORT"},
         {"url": "https://ayomalinggo.blog/maling/TOKEN/sbs_m3u.php", "group": "WORLD CUP 2026"},
-        {"url": "https://ayo.maling.pl/sawitku.m3u", "group": "EVENT SAWIT"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"}
     ]
 
@@ -113,11 +112,11 @@ def get_playlist(path):
                     
             elif not line.startswith("#"):
                 stream_url = line 
-                
-                # Jahit info channel dengan link, tanpa di-reset info channelnya
-                # biar kalau ada link cadangan tetep masuk dengan nama yang sama
+                # Bypass semua stream_url langsung masuk tanpa cek duplikat
                 if current_extinf:
                     merged_content += current_extinf + "\n" + stream_url + "\n"
+                
+                current_extinf = ""
                 
             elif line.startswith("#") and current_extinf:
                 current_extinf += "\n" + line
