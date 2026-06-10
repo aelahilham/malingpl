@@ -48,7 +48,6 @@ def get_playlist(path):
     ]
 
     merged_content = "#EXTM3U\n"
-    seen_urls = set()
     
     for pl in playlists:
         playlist_text = fetch_playlist(pl["url"])
@@ -96,7 +95,7 @@ def get_playlist(path):
                     # Jahit kembali atribut dan nama channel
                     line = f"{attrs},{name}"
                 
-                # Ekstrak untuk kebutuhan ngecek duplikat dan ngecek Base64 
+                # Ekstrak untuk kebutuhan ngecek Base64 
                 # (Ini tetep di-lower() biar engine pencariannya gak error karena beda huruf besar/kecil)
                 channel_name_for_check = line.split(",")[-1].strip().lower()
                 
@@ -110,8 +109,8 @@ def get_playlist(path):
                     
             elif not line.startswith("#"):
                 stream_url = line 
-                if current_extinf and stream_url not in seen_urls:
-                    seen_urls.add(stream_url)
+                # Bypass semua stream_url langsung masuk tanpa cek duplikat
+                if current_extinf:
                     merged_content += current_extinf + "\n" + stream_url + "\n"
                 
                 current_extinf = ""
