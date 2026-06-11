@@ -41,6 +41,7 @@ def get_playlist(path):
         {"url": "https://enakmalinggo.blog/maling/93.php", "group": "LIVE TV"},
         {"url": "https://ayomalinggo.blog/maling/Nweb.php?action=m3u", "group": "SPORT ARB"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORT NEW"},
+        {"url": "http://hometv.biz.id/get.php?username=SIARAN_TRIAL&password=dZhP257HGH&type=m3u_plus&output=m3u8", "group": "TV MALING"},
         {"url": "https://enakmalinggo.blog/maling/logo.php", "group": "OLAHRAGA"},
         {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIHOME"},
         {"url": "https://enakmalinggo.blog/maling/dens.php", "group": "DENS"},
