@@ -3,6 +3,7 @@ import requests
 import re
 import base64
 import time
+import unicodedata
 from urllib.parse import quote, unquote
 
 app = Flask(__name__)
@@ -82,9 +83,13 @@ def get_playlist(path):
                     attrs = re.sub(r'^(#EXTINF:[-0-9]+),', r'\1 ', attrs)
                     line = f"{attrs},{name}"
                 
-                # 2. Pisahin Grup Duplikat & Pemaksa CAPSLOCK
+                # 2. Proses Nama, Karakter Gaib, dan Duplikasi Grup
                 if "," in line:
                     attrs, name = line.rsplit(',', 1)
+                    
+                    # ---> FITUR BARU: Basmi Karakter Gaib
+                    # Kategori: Control (Cc), Format (Cf), Unassigned (Cn), Private Use (Co), Surrogate (Cs)
+                    name = "".join(c for c in name if unicodedata.category(c) not in ['Cc', 'Cf', 'Cn', 'Co', 'Cs'])
                     
                     # Ubah Nama Channel jadi HURUF BESAR
                     name = name.strip().upper()
@@ -96,17 +101,18 @@ def get_playlist(path):
                     else:
                         base_group_name = pl["group"].upper()
                     
+                    # Basmi karakter gaib di nama grup juga buat jaga-jaga
+                    base_group_name = "".join(c for c in base_group_name if unicodedata.category(c) not in ['Cc', 'Cf', 'Cn', 'Co', 'Cs'])
+                    
                     group_key = (pl["url"], base_group_name)
                     
-                    # LOGIKA BARU: Penomoran pakai kurung siku [2], [3], dst
+                    # Penomoran pakai kurung siku [2], [3], dst
                     if group_key not in group_versions:
                         if base_group_name not in group_counts:
                             group_counts[base_group_name] = 1
-                            # Kemunculan pertama, gak pakai angka
                             group_versions[group_key] = base_group_name
                         else:
                             group_counts[base_group_name] += 1
-                            # Kemunculan kedua dan seterusnya, pakai format [Angka]
                             group_versions[group_key] = f"{base_group_name} [{group_counts[base_group_name]}]"
                     
                     final_group_name = group_versions[group_key]
