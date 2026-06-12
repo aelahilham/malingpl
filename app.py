@@ -37,7 +37,7 @@ def get_playlist(path):
         {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
         {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
-        {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "TVRI CHANNEL"},
+        {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"},
         {"url": "https://malingya.goblogtv.workers.dev/", "group": "LIVE AUTO II"},
         {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
         {"url": "https://enakmalinggo.blog/maling/93.php", "group": "LIVE TV"},
@@ -65,7 +65,11 @@ def get_playlist(path):
             continue
             
         lines = playlist_text.splitlines()
+        
+        # Buffer untuk nyimpen metadata sebelum ketemu stream URL
         current_extinf = ""
+        ext_tags = []
+        stream_headers = ""
         
         for line in lines:
             line = line.strip()
@@ -88,8 +92,7 @@ def get_playlist(path):
                 if "," in line:
                     attrs, name = line.rsplit(',', 1)
                     
-                    # ---> FITUR BARU: Basmi Karakter Gaib
-                    # Kategori: Control (Cc), Format (Cf), Unassigned (Cn), Private Use (Co), Surrogate (Cs)
+                    # Basmi Karakter Gaib
                     name = "".join(c for c in name if unicodedata.category(c) not in ['Cc', 'Cf', 'Cn', 'Co', 'Cs'])
                     
                     # Ubah Nama Channel jadi HURUF BESAR
@@ -102,7 +105,6 @@ def get_playlist(path):
                     else:
                         base_group_name = pl["group"].upper()
                     
-                    # Basmi karakter gaib di nama grup juga buat jaga-jaga
                     base_group_name = "".join(c for c in base_group_name if unicodedata.category(c) not in ['Cc', 'Cf', 'Cn', 'Co', 'Cs'])
                     
                     group_key = (pl["url"], base_group_name)
@@ -118,16 +120,14 @@ def get_playlist(path):
                     
                     final_group_name = group_versions[group_key]
                     
-                    # Suntikkan final_group_name kembali ke atribut
                     if match_group:
                         attrs = re.sub(r'group-title="[^"]+"', f'group-title="{final_group_name}"', attrs)
                     else:
                         attrs = re.sub(r'^(#EXTINF:[-0-9]+)\s*', rf'\1 group-title="{final_group_name}" ', attrs)
                         
-                    # Jahit kembali atribut dan nama channel
                     line = f"{attrs},{name}"
                 
-                # 3. Ekstrak untuk kebutuhan ngecek Base64 (Tetap lowercase untuk engine)
+                # 3. Ekstrak untuk kebutuhan ngecek Base64 
                 channel_name_for_check = line.split(",")[-1].strip().lower()
                 
                 if re.search(r'tvg-logo=["\']data:image/', line, flags=re.IGNORECASE):
@@ -136,17 +136,37 @@ def get_playlist(path):
                     new_logo_url = f"{request.host_url}logo?pl_url={safe_url}&ch={safe_ch}"
                     line = re.sub(r'tvg-logo=["\']data:image/[^"\']+["\']', f'tvg-logo="{new_logo_url}"', line, flags=re.IGNORECASE)
 
+                # Reset buffer buat channel baru ini
                 current_extinf = line
-                    
-            elif not line.startswith("#"):
-                stream_url = line 
-                if current_extinf:
-                    merged_content += current_extinf + "\n" + stream_url + "\n"
+                ext_tags = []
+                stream_headers = ""
                 
-                current_extinf = ""
-                
+            # Nangkap metadata tambahan (kayak #EXTVLCOPT)
             elif line.startswith("#") and current_extinf:
-                current_extinf += "\n" + line
+                ext_tags.append(line)
+                
+            # Nangkap header yang kepisah (kayak |Referer=...)
+            elif line.startswith("|") and current_extinf:
+                stream_headers += line
+                
+            # Ini pasti link stream aslinya (http/https/dsb)
+            elif not line.startswith("#") and current_extinf:
+                stream_url = line 
+                
+                # Jahit #EXTINF
+                merged_content += current_extinf + "\n"
+                
+                # Jahit tag tambahan (kalau ada)
+                if ext_tags:
+                    merged_content += "\n".join(ext_tags) + "\n"
+                
+                # Jahit link stream + headernya jadi SATU BARIS
+                merged_content += stream_url + stream_headers + "\n"
+                
+                # Kosongin buffer biar siap baca channel selanjutnya
+                current_extinf = ""
+                ext_tags = []
+                stream_headers = ""
 
     return Response(merged_content, mimetype='audio/mpegurl; charset=utf-8')
 
