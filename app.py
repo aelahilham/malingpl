@@ -54,6 +54,10 @@ def get_playlist(path):
 
     merged_content = "#EXTM3U\n"
     
+    # Tracker untuk menghitung grup dan mapping-nya ke setiap playlist
+    group_counts = {}
+    group_versions = {}
+    
     for pl in playlists:
         playlist_text = fetch_playlist(pl["url"])
         if not playlist_text:
@@ -61,7 +65,6 @@ def get_playlist(path):
             
         lines = playlist_text.splitlines()
         current_extinf = ""
-        channel_name = ""
         
         for line in lines:
             line = line.strip()
@@ -80,22 +83,40 @@ def get_playlist(path):
                     attrs = re.sub(r'^(#EXTINF:[-0-9]+),', r'\1 ', attrs)
                     line = f"{attrs},{name}"
                 
-                # ---> FITUR BARU: Pemaksa CAPSLOCK
+                # ---> FITUR BARU: Pisahin Grup Duplikat & Pemaksa CAPSLOCK
                 if "," in line:
                     attrs, name = line.rsplit(',', 1)
                     
                     # Ubah Nama Channel jadi HURUF BESAR
                     name = name.strip().upper()
                     
-                    # Ubah Group Title jadi HURUF BESAR
-                    if "group-title=" not in attrs:
-                        # Kalau ga ada, suntik dari variabel playlists dan langsung di-upper()
-                        attrs = re.sub(r'^(#EXTINF:[-0-9]+)\s*', rf'\1 group-title="{pl["group"].upper()}" ', attrs)
+                    # Ekstrak base group name
+                    match_group = re.search(r'group-title="([^"]+)"', attrs)
+                    if match_group:
+                        base_group_name = match_group.group(1).upper()
                     else:
-                        # Kalau udah ada dari asalnya, cari isinya dan ubah jadi upper()
-                        def capslock_group(match):
-                            return f'group-title="{match.group(1).upper()}"'
-                        attrs = re.sub(r'group-title="([^"]+)"', capslock_group, attrs)
+                        base_group_name = pl["group"].upper()
+                    
+                    # Kunci unik untuk mengecek kombinasi URL playlist dan nama grup dasar
+                    group_key = (pl["url"], base_group_name)
+                    
+                    # Kalau grup di playlist ini belum dapet nomor urut
+                    if group_key not in group_versions:
+                        if base_group_name not in group_counts:
+                            group_counts[base_group_name] = 1
+                        else:
+                            group_counts[base_group_name] += 1
+                            
+                        # Setel nama final (Contoh: NASIONAL 1, NASIONAL 2, dst)
+                        group_versions[group_key] = f"{base_group_name} {group_counts[base_group_name]}"
+                    
+                    final_group_name = group_versions[group_key]
+                    
+                    # Suntikkan final_group_name kembali ke atribut
+                    if match_group:
+                        attrs = re.sub(r'group-title="[^"]+"', f'group-title="{final_group_name}"', attrs)
+                    else:
+                        attrs = re.sub(r'^(#EXTINF:[-0-9]+)\s*', rf'\1 group-title="{final_group_name}" ', attrs)
                         
                     # Jahit kembali atribut dan nama channel
                     line = f"{attrs},{name}"
