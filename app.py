@@ -13,7 +13,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 app = Flask(__name__)
 
 SOURCE_CACHE = {}
-CACHE_TTL = 300 
+# SEMENTARA GUE BIKIN 5 DETIK BIAR LU GAMPANG NGETESNYA.
+# Kalau udah work, ubah lagi ke 300.
+CACHE_TTL = 5 
 
 def fetch_playlist(url):
     now = time.time()
@@ -22,19 +24,18 @@ def fetch_playlist(url):
     
     try:
         headers = {
-            # Ganti User-Agent jadi VLC biar server IPTV gak nge-blokir script kita
-            "User-Agent": "VLC/3.0.16 LibVLC/3.0.16",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "*/*"
         }
-        # verify=False penting banget buat ngelewatin server IPTV yang SSL-nya mati/error
         resp = requests.get(url, headers=headers, timeout=15, verify=False)
         if resp.status_code == 200:
-            resp.encoding = 'utf-8-sig' # Otomatis buang karakter BOM (Byte Order Mark) kalau ada
+            resp.encoding = 'utf-8-sig' # Otomatis buang karakter BOM
             SOURCE_CACHE[url] = {'data': resp.text, 'time': now}
             return resp.text
+        else:
+            print(f"Gagal narik dari {url} - Status: {resp.status_code}")
     except Exception as e:
-        print(f"Buset, gagal narik dari {url} nih errornya: {e}")
-        pass
+        print(f"Error pas narik {url}: {e}")
     return None
 
 @app.route('/', defaults={'path': ''})
@@ -42,26 +43,22 @@ def fetch_playlist(url):
 def get_playlist(path):
     playlists = [
         {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
-        {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1""},
-        {"url": "https://ayomalinggo.blog/maling/sportzfy_proxy.php?type=events", "group": "USA LIVE 01"},
-        {"url": "https://ayomalinggo.blog/maling/sportzfy_proxy.php?type=channels", "group": "USA LIVE 02"},
+        {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
         {"url": "https://malingya.goblogtv.workers.dev/", "group": "LIVE AUTO II"},
-        {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVEN+"},
+        {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
         {"url": "https://enakmalinggo.blog/maling/93.php", "group": "LIVE TV"},
         {"url": "https://ayomalinggo.blog/maling/Nweb.php?action=m3u", "group": "SPORT ARB"},
-        {"url": "https://ayomalinggo.blog/maling/exo_playlist.php", "group": "SPORT ARAB"},
-        {"url": "http://hometv.biz.id/get.php?username=SIARAN_TRIAL&password=dZhP257HGH&type=m3u_plus&output=m3u8", "group": "TV MALING"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORT NEW"},
+        {"url": "http://hometv.biz.id/get.php?username=SIARAN_TRIAL&password=dZhP257HGH&type=m3u_plus&output=m3u8", "group": "TV MALING"},
         {"url": "https://enakmalinggo.blog/maling/logo.php", "group": "OLAHRAGA"},
-        {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIEHOME"},
+        {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIHOME"},
         {"url": "https://enakmalinggo.blog/maling/dens.php", "group": "DENS"},
         {"url": "https://thth.dasarweddus.workers.dev/", "group": "AUTO 1 SPORT"},
         {"url": "https://ayo.maling.pl/Rak/1.php", "group": "AUTO 2 SPORT"},
         {"url": "https://ayomalinggo.blog/maling/TOKEN/sbs_m3u.php", "group": "WORLD CUP 2026"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
-        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
-        {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
-        {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"}
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"}
     ]
 
     merged_content = "#EXTM3U\n"
@@ -140,64 +137,33 @@ def get_playlist(path):
                     new_logo_url = f"{request.host_url}logo?pl_url={safe_url}&ch={safe_ch}"
                     line = re.sub(r'tvg-logo=["\']data:image/[^"\']+["\']', f'tvg-logo="{new_logo_url}"', line, flags=re.IGNORECASE)
 
-                # Reset buffer buat channel baru ini
                 current_extinf = line
                 ext_tags = []
                 stream_headers = ""
                 
-            # Nangkap metadata tambahan (kayak #EXTVLCOPT atau #KODIPROP)
+            # Nangkap metadata tambahan (PERTahankan KODIPROP asli utuh!)
             elif line.startswith("#") and current_extinf:
                 ext_tags.append(line)
                 
-            # Nangkap header yang kepisah (kayak |Referer=...)
+            # Nangkap header yang kepisah kayak |Referer= biar tetep jalan
             elif line.startswith("|") and current_extinf:
                 stream_headers += line
                 
-            # Ini pasti link stream aslinya (http/https/dsb)
+            # Pas ketemu link video, satukan semua secara berurutan
             elif not line.startswith("#") and current_extinf:
                 stream_url = line 
-                
-                # ---> FITUR BARU: Konversi KODIPROP jadi ExoPlayer Pipes
-                drm_scheme = ""
-                drm_license_url = ""
-                clean_ext_tags = []
-                
-                for tag in ext_tags:
-                    tag_upper = tag.upper()
-                    if tag_upper.startswith("#KODIPROP:LICENSE_TYPE="):
-                        # Ambil value setelah sama dengan
-                        drm_scheme = tag.split("=", 1)[1].strip()
-                    elif tag_upper.startswith("#KODIPROP:LICENSE_KEY="):
-                        drm_license_url = tag.split("=", 1)[1].strip()
-                    else:
-                        # Kalau bukan KODIPROP, tetep disimpen di list
-                        clean_ext_tags.append(tag)
-                
-                # Kalau ketemu DRM, kita suntik jadi pipe header sekalian
-                if drm_scheme or drm_license_url:
-                    drm_str = ""
-                    if drm_scheme: 
-                        drm_str += f"drm_scheme={drm_scheme}&"
-                    if drm_license_url: 
-                        drm_str += f"drm_license_url={drm_license_url}"
-                    drm_str = drm_str.rstrip("&")
-                    
-                    if not stream_headers:
-                        stream_headers = f"|{drm_str}"
-                    else:
-                        stream_headers += f"&{drm_str}"
                 
                 # Jahit #EXTINF
                 merged_content += current_extinf + "\n"
                 
-                # Jahit tag tambahan (yang udah dibersihin dari KODIPROP biar player gak error)
-                if clean_ext_tags:
-                    merged_content += "\n".join(clean_ext_tags) + "\n"
+                # Jahit KODIPROP / tag tambahan persis di bawah EXTINF
+                if ext_tags:
+                    merged_content += "\n".join(ext_tags) + "\n"
                 
-                # Jahit link stream + headernya jadi SATU BARIS
+                # Jahit link stream + header referer jadi SATU BARIS
                 merged_content += stream_url + stream_headers + "\n"
                 
-                # Kosongin buffer
+                # Kosongin buffer untuk channel selanjutnya
                 current_extinf = ""
                 ext_tags = []
                 stream_headers = ""
