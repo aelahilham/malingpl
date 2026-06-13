@@ -54,23 +54,27 @@ def fetch_playlist(url):
 def get_playlist(path):
     try:
         playlists = [
-            {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
-            {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1"},
-            {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
-            {"url": "https://malingya.goblogtv.workers.dev/", "group": "LIVE AUTO II"},
-            {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
-            {"url": "https://enakmalinggo.blog/maling/93.php", "group": "LIVE TV"},
-            {"url": "https://ayomalinggo.blog/maling/Nweb.php?action=m3u", "group": "SPORT ARB"},
-            {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORT NEW"},
-            {"url": "http://hometv.biz.id/get.php?username=SIARAN_TRIAL&password=dZhP257HGH&type=m3u_plus&output=m3u8", "group": "TV MALING"},
-            {"url": "https://enakmalinggo.blog/maling/logo.php", "group": "OLAHRAGA"},
-            {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIHOME"},
-            {"url": "https://enakmalinggo.blog/maling/dens.php", "group": "DENS"},
-            {"url": "https://thth.dasarweddus.workers.dev/", "group": "AUTO 1 SPORT"},
-            {"url": "https://ayo.maling.pl/Rak/1.php", "group": "AUTO 2 SPORT"},
-            {"url": "https://ayomalinggo.blog/maling/TOKEN/sbs_m3u.php", "group": "WORLD CUP 2026"},
-            {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
-            {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"}
+        {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
+        {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1""},
+        {"url": "https://ayomalinggo.blog/maling/sportzfy_proxy.php?type=events", "group": "USA LIVE 01"},
+        {"url": "https://ayomalinggo.blog/maling/sportzfy_proxy.php?type=channels", "group": "USA LIVE 02"},
+        {"url": "https://malingya.goblogtv.workers.dev/", "group": "LIVE AUTO II"},
+        {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVEN+"},
+        {"url": "https://enakmalinggo.blog/maling/93.php", "group": "LIVE TV"},
+        {"url": "https://ayomalinggo.blog/maling/Nweb.php?action=m3u", "group": "SPORT ARB"},
+        {"url": "https://ayomalinggo.blog/maling/exo_playlist.php", "group": "SPORT ARAB"},
+        {"url": "http://hometv.biz.id/get.php?username=SIARAN_TRIAL&password=dZhP257HGH&type=m3u_plus&output=m3u8", "group": "TV MALING"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORT NEW"},
+        {"url": "https://enakmalinggo.blog/maling/logo.php", "group": "OLAHRAGA"},
+        {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIEHOME"},
+        {"url": "https://enakmalinggo.blog/maling/dens.php", "group": "DENS"},
+        {"url": "https://thth.dasarweddus.workers.dev/", "group": "AUTO 1 SPORT"},
+        {"url": "https://ayo.maling.pl/Rak/1.php", "group": "AUTO 2 SPORT"},
+        {"url": "https://ayomalinggo.blog/maling/TOKEN/sbs_m3u.php", "group": "WORLD CUP 2026"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
+        {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"}
             # PASTIKAN MASUKIN LINK ATAU PATH FILE TNT LU DI BAWAH SINI!
             # {"url": "C:/folder/sportzfy_proxy.php.txt", "group": "TNT SPORTS"}
         ]
