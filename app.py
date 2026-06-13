@@ -30,55 +30,28 @@ def fetch_playlist(url):
         pass
     return None
 
-def sanitize_url(url):
-    """
-    Bersihin URL dari karakter-karakter yang bikin stream gagal load:
-    - Spasi di dalam URL (contoh: '383 .m3u8') -> di-strip atau di-encode
-    - Karakter whitespace liar di awal/akhir
-    """
-    # Strip whitespace di awal & akhir dulu
-    url = url.strip()
-    # Kalau ada spasi DI DALAM url (bukan di query string), encode jadi %20
-    # Tapi jangan encode spasi yang memang bagian dari pipe-header (ditangani terpisah)
-    url = re.sub(r' (?=[^\s])', '%20', url)
-    return url
-
-def is_stream_url(line):
-    """Cek apakah baris ini adalah URL stream yang valid."""
-    return (
-        line.startswith("http://") or
-        line.startswith("https://") or
-        line.startswith("rtmp://") or
-        line.startswith("rtsp://") or
-        line.startswith("udp://") or
-        line.startswith("rtp://")
-    )
-
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def get_playlist(path):
     playlists = [
         {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
-        {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1""},
-        {"url": "https://ayomalinggo.blog/maling/sportzfy_proxy.php?type=events", "group": "USA LIVE 01"},
-        {"url": "https://ayomalinggo.blog/maling/sportzfy_proxy.php?type=channels", "group": "USA LIVE 02"},
+        {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1"},
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
+        {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"},
         {"url": "https://malingya.goblogtv.workers.dev/", "group": "LIVE AUTO II"},
-        {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVEN+"},
+        {"url": "https://ayo.maling.pl/thth/1.php", "group": "EVENT+"},
         {"url": "https://enakmalinggo.blog/maling/93.php", "group": "LIVE TV"},
         {"url": "https://ayomalinggo.blog/maling/Nweb.php?action=m3u", "group": "SPORT ARB"},
-        {"url": "https://ayomalinggo.blog/maling/exo_playlist.php", "group": "SPORT ARAB"},
-        {"url": "http://hometv.biz.id/get.php?username=SIARAN_TRIAL&password=dZhP257HGH&type=m3u_plus&output=m3u8", "group": "TV MALING"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/hasilnya.php", "group": "SPORT NEW"},
+        {"url": "http://hometv.biz.id/get.php?username=SIARAN_TRIAL&password=dZhP257HGH&type=m3u_plus&output=m3u8", "group": "TV MALING"},
         {"url": "https://enakmalinggo.blog/maling/logo.php", "group": "OLAHRAGA"},
-        {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIEHOME"},
+        {"url": "https://raw.githubusercontent.com/apistech/project/refs/heads/main/IndihomeTV.m3u", "group": "INDIHOME"},
         {"url": "https://enakmalinggo.blog/maling/dens.php", "group": "DENS"},
         {"url": "https://thth.dasarweddus.workers.dev/", "group": "AUTO 1 SPORT"},
         {"url": "https://ayo.maling.pl/Rak/1.php", "group": "AUTO 2 SPORT"},
         {"url": "https://ayomalinggo.blog/maling/TOKEN/sbs_m3u.php", "group": "WORLD CUP 2026"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
-        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
-        {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
-        {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"}
+        {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"}
     ]
 
     merged_content = "#EXTM3U\n"
@@ -130,8 +103,6 @@ def get_playlist(path):
                     if match_group:
                         base_group_name = match_group.group(1).upper()
                     else:
-                        # ✅ FIX: Kalau group-title tidak ada di attrs,
-                        # pakai fallback group dari list dan inject ke attrs
                         base_group_name = pl["group"].upper()
                     
                     base_group_name = "".join(c for c in base_group_name if unicodedata.category(c) not in ['Cc', 'Cf', 'Cn', 'Co', 'Cs'])
@@ -152,7 +123,6 @@ def get_playlist(path):
                     if match_group:
                         attrs = re.sub(r'group-title="[^"]+"', f'group-title="{final_group_name}"', attrs)
                     else:
-                        # ✅ FIX: Inject group-title ke attrs kalau belum ada
                         attrs = re.sub(r'^(#EXTINF:[-0-9]+)\s*', rf'\1 group-title="{final_group_name}" ', attrs)
                         
                     line = f"{attrs},{name}"
@@ -178,19 +148,10 @@ def get_playlist(path):
             # Nangkap header yang kepisah (kayak |Referer=...)
             elif line.startswith("|") and current_extinf:
                 stream_headers += line
-
-            # ✅ FIX: Tangkap URL stream yang valid
-            elif is_stream_url(line) and current_extinf:
-                # Pisahkan URL dari inline pipe-header kalau ada
-                # Contoh: https://example.com/stream.m3u8|Referer=https://site.com/
-                if "|" in line:
-                    parts = line.split("|", 1)
-                    stream_url = sanitize_url(parts[0])
-                    # Pipe-header inline digabung ke stream_headers
-                    inline_header = "|" + parts[1]
-                    stream_headers = inline_header + stream_headers
-                else:
-                    stream_url = sanitize_url(line)
+                
+            # Ini pasti link stream aslinya (http/https/dsb)
+            elif not line.startswith("#") and current_extinf:
+                stream_url = line 
                 
                 # Jahit #EXTINF
                 merged_content += current_extinf + "\n"
