@@ -5,6 +5,10 @@ import base64
 import time
 import unicodedata
 from urllib.parse import quote, unquote
+import urllib3
+
+# Matiin warning SSL biar terminal lu gak spam merah-merah
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
@@ -18,15 +22,18 @@ def fetch_playlist(url):
     
     try:
         headers = {
-            "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36",
+            # Ganti User-Agent jadi VLC biar server IPTV gak nge-blokir script kita
+            "User-Agent": "VLC/3.0.16 LibVLC/3.0.16",
             "Accept": "*/*"
         }
-        resp = requests.get(url, headers=headers, timeout=10)
+        # verify=False penting banget buat ngelewatin server IPTV yang SSL-nya mati/error
+        resp = requests.get(url, headers=headers, timeout=15, verify=False)
         if resp.status_code == 200:
-            resp.encoding = 'utf-8'
+            resp.encoding = 'utf-8-sig' # Otomatis buang karakter BOM (Byte Order Mark) kalau ada
             SOURCE_CACHE[url] = {'data': resp.text, 'time': now}
             return resp.text
-    except Exception:
+    except Exception as e:
+        print(f"Buset, gagal narik dari {url} nih errornya: {e}")
         pass
     return None
 
@@ -69,7 +76,6 @@ def get_playlist(path):
             
         lines = playlist_text.splitlines()
         
-        # Buffer untuk nyimpen metadata sebelum ketemu stream URL
         current_extinf = ""
         ext_tags = []
         stream_headers = ""
@@ -95,13 +101,9 @@ def get_playlist(path):
                 if "," in line:
                     attrs, name = line.rsplit(',', 1)
                     
-                    # Basmi Karakter Gaib
                     name = "".join(c for c in name if unicodedata.category(c) not in ['Cc', 'Cf', 'Cn', 'Co', 'Cs'])
-                    
-                    # Ubah Nama Channel jadi HURUF BESAR
                     name = name.strip().upper()
                     
-                    # Ekstrak base group name
                     match_group = re.search(r'group-title="([^"]+)"', attrs)
                     if match_group:
                         base_group_name = match_group.group(1).upper()
@@ -112,7 +114,6 @@ def get_playlist(path):
                     
                     group_key = (pl["url"], base_group_name)
                     
-                    # Penomoran pakai kurung siku [2], [3], dst
                     if group_key not in group_versions:
                         if base_group_name not in group_counts:
                             group_counts[base_group_name] = 1
@@ -144,7 +145,7 @@ def get_playlist(path):
                 ext_tags = []
                 stream_headers = ""
                 
-            # Nangkap metadata tambahan (kayak #EXTVLCOPT)
+            # Nangkap metadata tambahan (kayak #EXTVLCOPT atau #KODIPROP)
             elif line.startswith("#") and current_extinf:
                 ext_tags.append(line)
                 
@@ -156,17 +157,47 @@ def get_playlist(path):
             elif not line.startswith("#") and current_extinf:
                 stream_url = line 
                 
+                # ---> FITUR BARU: Konversi KODIPROP jadi ExoPlayer Pipes
+                drm_scheme = ""
+                drm_license_url = ""
+                clean_ext_tags = []
+                
+                for tag in ext_tags:
+                    tag_upper = tag.upper()
+                    if tag_upper.startswith("#KODIPROP:LICENSE_TYPE="):
+                        # Ambil value setelah sama dengan
+                        drm_scheme = tag.split("=", 1)[1].strip()
+                    elif tag_upper.startswith("#KODIPROP:LICENSE_KEY="):
+                        drm_license_url = tag.split("=", 1)[1].strip()
+                    else:
+                        # Kalau bukan KODIPROP, tetep disimpen di list
+                        clean_ext_tags.append(tag)
+                
+                # Kalau ketemu DRM, kita suntik jadi pipe header sekalian
+                if drm_scheme or drm_license_url:
+                    drm_str = ""
+                    if drm_scheme: 
+                        drm_str += f"drm_scheme={drm_scheme}&"
+                    if drm_license_url: 
+                        drm_str += f"drm_license_url={drm_license_url}"
+                    drm_str = drm_str.rstrip("&")
+                    
+                    if not stream_headers:
+                        stream_headers = f"|{drm_str}"
+                    else:
+                        stream_headers += f"&{drm_str}"
+                
                 # Jahit #EXTINF
                 merged_content += current_extinf + "\n"
                 
-                # Jahit tag tambahan (kalau ada)
-                if ext_tags:
-                    merged_content += "\n".join(ext_tags) + "\n"
+                # Jahit tag tambahan (yang udah dibersihin dari KODIPROP biar player gak error)
+                if clean_ext_tags:
+                    merged_content += "\n".join(clean_ext_tags) + "\n"
                 
                 # Jahit link stream + headernya jadi SATU BARIS
                 merged_content += stream_url + stream_headers + "\n"
                 
-                # Kosongin buffer biar siap baca channel selanjutnya
+                # Kosongin buffer
                 current_extinf = ""
                 ext_tags = []
                 stream_headers = ""
