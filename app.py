@@ -7,13 +7,13 @@ import unicodedata
 from urllib.parse import quote, unquote
 import urllib3
 
-# Matiin warning SSL
+# Matiin warning SSL biar bersih
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
 SOURCE_CACHE = {}
-# Masih 5 detik biar gampang ngetesnya
+# Masih gue set 5 detik biar lu cepet ngetesnya. Kalau udah work, ubah ke 300.
 CACHE_TTL = 5 
 
 def fetch_playlist(url):
@@ -23,10 +23,9 @@ def fetch_playlist(url):
     
     try:
         headers = {
-            # Nyamar jadi Android IPTV Player tulen (ExoPlayer) biar gak kena blokir firewall provider
-            "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 11; SM-G998B Build/RP1A.200720.012) ExoPlayer.core/2.14.0",
-            "Accept": "*/*",
-            "Connection": "keep-alive"
+            # KITA BALIKIN KE BROWSER ANDROID YANG UDAH TERBUKTI WORK KEMAREN
+            "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36",
+            "Accept": "*/*"
         }
         resp = requests.get(url, headers=headers, timeout=15, verify=False)
         if resp.status_code == 200:
@@ -34,10 +33,8 @@ def fetch_playlist(url):
             SOURCE_CACHE[url] = {'data': resp.text, 'time': now}
             return resp.text
         else:
-            print(f"Gagal narik dari {url} - Status Code: {resp.status_code}")
             return None
-    except Exception as e:
-        print(f"Error pas narik {url}: {e}")
+    except Exception:
         return None
 
 @app.route('/', defaults={'path': ''})
@@ -65,7 +62,8 @@ def get_playlist(path):
         {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
         {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"}
-        # PASTIKAN PLAYLIST BARU LU UDAH DIMASUKIN KE SINI JUGA YA!
+        # LU WAJIB NAMBAHIN LINK MPD TNT SPORTS LU DI SINI YA BRO, 
+        # CONTOH: {"url": "http://domain-lu.com/sportzfy_proxy.php", "group": "TNT BARU"}
     ]
 
     merged_content = "#EXTM3U\n"
@@ -76,9 +74,9 @@ def get_playlist(path):
     for pl in playlists:
         playlist_text = fetch_playlist(pl["url"])
         
-        # ---> FITUR BARU: Alarm kalau script diblokir provider
-        if not playlist_text:
-            merged_content += f'#EXTINF:-1 tvg-logo="", ❌ GAGAL FETCH: {pl["group"]}\n'
+        # LOGIKA ALARM BARU: Kalau gagal narik ATAU diblokir pake HTML (Cloudflare)
+        if not playlist_text or "#EXTINF" not in playlist_text:
+            merged_content += f'#EXTINF:-1 tvg-logo="", ❌ DIBLOKIR PROVIDER: {pl["group"]}\n'
             merged_content += "http://localhost/dummy_error.m3u8\n"
             continue
             
@@ -139,7 +137,7 @@ def get_playlist(path):
                         
                     line = f"{attrs},{name}"
                 
-                # 3. Ekstrak untuk kebutuhan ngecek Base64 
+                # 3. Ekstrak untuk logo Base64 
                 channel_name_for_check = line.split(",")[-1].strip().lower()
                 
                 if re.search(r'tvg-logo=["\']data:image/', line, flags=re.IGNORECASE):
@@ -152,18 +150,18 @@ def get_playlist(path):
                 ext_tags = []
                 stream_headers = ""
                 
-            # Nangkap KODIPROP dan tag lain utuh-utuh
+            # Nangkap KODIPROP dan tag lain
             elif line.startswith("#") and current_extinf:
                 ext_tags.append(line)
                 
+            # Nangkap referer
             elif line.startswith("|") and current_extinf:
                 stream_headers += line
                 
-            # Nangkap link video
+            # Satukan link utama
             elif not line.startswith("#") and current_extinf:
                 stream_url = line 
                 
-                # Susunannya dipastikan persis kayak raw data lu
                 merged_content += current_extinf + "\n"
                 
                 if ext_tags:
