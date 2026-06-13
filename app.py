@@ -54,7 +54,7 @@ def get_playlist(path):
         {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
-        {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"},
+        {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"}
     ]
 
     merged_content = "#EXTM3U\n"
