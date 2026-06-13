@@ -5,16 +5,11 @@ import base64
 import time
 import unicodedata
 from urllib.parse import quote, unquote
-import urllib3
-
-# Matiin warning SSL biar bersih
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
 SOURCE_CACHE = {}
-# Masih gue set 5 detik biar lu cepet ngetesnya. Kalau udah work, ubah ke 300.
-CACHE_TTL = 5 
+CACHE_TTL = 300 
 
 def fetch_playlist(url):
     now = time.time()
@@ -23,19 +18,41 @@ def fetch_playlist(url):
     
     try:
         headers = {
-            # KITA BALIKIN KE BROWSER ANDROID YANG UDAH TERBUKTI WORK KEMAREN
             "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36",
             "Accept": "*/*"
         }
-        resp = requests.get(url, headers=headers, timeout=15, verify=False)
+        resp = requests.get(url, headers=headers, timeout=10)
         if resp.status_code == 200:
-            resp.encoding = 'utf-8-sig'
+            resp.encoding = 'utf-8'
             SOURCE_CACHE[url] = {'data': resp.text, 'time': now}
             return resp.text
-        else:
-            return None
     except Exception:
-        return None
+        pass
+    return None
+
+def sanitize_url(url):
+    """
+    Bersihin URL dari karakter-karakter yang bikin stream gagal load:
+    - Spasi di dalam URL (contoh: '383 .m3u8') -> di-strip atau di-encode
+    - Karakter whitespace liar di awal/akhir
+    """
+    # Strip whitespace di awal & akhir dulu
+    url = url.strip()
+    # Kalau ada spasi DI DALAM url (bukan di query string), encode jadi %20
+    # Tapi jangan encode spasi yang memang bagian dari pipe-header (ditangani terpisah)
+    url = re.sub(r' (?=[^\s])', '%20', url)
+    return url
+
+def is_stream_url(line):
+    """Cek apakah baris ini adalah URL stream yang valid."""
+    return (
+        line.startswith("http://") or
+        line.startswith("https://") or
+        line.startswith("rtmp://") or
+        line.startswith("rtsp://") or
+        line.startswith("udp://") or
+        line.startswith("rtp://")
+    )
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -62,8 +79,6 @@ def get_playlist(path):
         {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
         {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"}
-        # LU WAJIB NAMBAHIN LINK MPD TNT SPORTS LU DI SINI YA BRO, 
-        # CONTOH: {"url": "http://domain-lu.com/sportzfy_proxy.php", "group": "TNT BARU"}
     ]
 
     merged_content = "#EXTM3U\n"
@@ -73,15 +88,12 @@ def get_playlist(path):
     
     for pl in playlists:
         playlist_text = fetch_playlist(pl["url"])
-        
-        # LOGIKA ALARM BARU: Kalau gagal narik ATAU diblokir pake HTML (Cloudflare)
-        if not playlist_text or "#EXTINF" not in playlist_text:
-            merged_content += f'#EXTINF:-1 tvg-logo="", ❌ DIBLOKIR PROVIDER: {pl["group"]}\n'
-            merged_content += "http://localhost/dummy_error.m3u8\n"
+        if not playlist_text:
             continue
             
         lines = playlist_text.splitlines()
         
+        # Buffer untuk nyimpen metadata sebelum ketemu stream URL
         current_extinf = ""
         ext_tags = []
         stream_headers = ""
@@ -107,19 +119,26 @@ def get_playlist(path):
                 if "," in line:
                     attrs, name = line.rsplit(',', 1)
                     
+                    # Basmi Karakter Gaib
                     name = "".join(c for c in name if unicodedata.category(c) not in ['Cc', 'Cf', 'Cn', 'Co', 'Cs'])
+                    
+                    # Ubah Nama Channel jadi HURUF BESAR
                     name = name.strip().upper()
                     
+                    # Ekstrak base group name
                     match_group = re.search(r'group-title="([^"]+)"', attrs)
                     if match_group:
                         base_group_name = match_group.group(1).upper()
                     else:
+                        # ✅ FIX: Kalau group-title tidak ada di attrs,
+                        # pakai fallback group dari list dan inject ke attrs
                         base_group_name = pl["group"].upper()
                     
                     base_group_name = "".join(c for c in base_group_name if unicodedata.category(c) not in ['Cc', 'Cf', 'Cn', 'Co', 'Cs'])
                     
                     group_key = (pl["url"], base_group_name)
                     
+                    # Penomoran pakai kurung siku [2], [3], dst
                     if group_key not in group_versions:
                         if base_group_name not in group_counts:
                             group_counts[base_group_name] = 1
@@ -133,11 +152,12 @@ def get_playlist(path):
                     if match_group:
                         attrs = re.sub(r'group-title="[^"]+"', f'group-title="{final_group_name}"', attrs)
                     else:
+                        # ✅ FIX: Inject group-title ke attrs kalau belum ada
                         attrs = re.sub(r'^(#EXTINF:[-0-9]+)\s*', rf'\1 group-title="{final_group_name}" ', attrs)
                         
                     line = f"{attrs},{name}"
                 
-                # 3. Ekstrak untuk logo Base64 
+                # 3. Ekstrak untuk kebutuhan ngecek Base64 
                 channel_name_for_check = line.split(",")[-1].strip().lower()
                 
                 if re.search(r'tvg-logo=["\']data:image/', line, flags=re.IGNORECASE):
@@ -146,29 +166,43 @@ def get_playlist(path):
                     new_logo_url = f"{request.host_url}logo?pl_url={safe_url}&ch={safe_ch}"
                     line = re.sub(r'tvg-logo=["\']data:image/[^"\']+["\']', f'tvg-logo="{new_logo_url}"', line, flags=re.IGNORECASE)
 
+                # Reset buffer buat channel baru ini
                 current_extinf = line
                 ext_tags = []
                 stream_headers = ""
                 
-            # Nangkap KODIPROP dan tag lain
+            # Nangkap metadata tambahan (kayak #EXTVLCOPT)
             elif line.startswith("#") and current_extinf:
                 ext_tags.append(line)
                 
-            # Nangkap referer
+            # Nangkap header yang kepisah (kayak |Referer=...)
             elif line.startswith("|") and current_extinf:
                 stream_headers += line
+
+            # ✅ FIX: Tangkap URL stream yang valid
+            elif is_stream_url(line) and current_extinf:
+                # Pisahkan URL dari inline pipe-header kalau ada
+                # Contoh: https://example.com/stream.m3u8|Referer=https://site.com/
+                if "|" in line:
+                    parts = line.split("|", 1)
+                    stream_url = sanitize_url(parts[0])
+                    # Pipe-header inline digabung ke stream_headers
+                    inline_header = "|" + parts[1]
+                    stream_headers = inline_header + stream_headers
+                else:
+                    stream_url = sanitize_url(line)
                 
-            # Satukan link utama
-            elif not line.startswith("#") and current_extinf:
-                stream_url = line 
-                
+                # Jahit #EXTINF
                 merged_content += current_extinf + "\n"
                 
+                # Jahit tag tambahan (kalau ada)
                 if ext_tags:
                     merged_content += "\n".join(ext_tags) + "\n"
                 
+                # Jahit link stream + headernya jadi SATU BARIS
                 merged_content += stream_url + stream_headers + "\n"
                 
+                # Kosongin buffer biar siap baca channel selanjutnya
                 current_extinf = ""
                 ext_tags = []
                 stream_headers = ""
