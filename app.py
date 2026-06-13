@@ -35,7 +35,7 @@ def fetch_playlist(url):
 def get_playlist(path):
     playlists = [
         {"url": "https://ayo.maling.pl/Vision/channels.php", "group": "VISION+"},
-        {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1""},
+        {"url": "https://ayomalinggo.blog/maling/malingenak.m3u", "group": "AUTO LIVE 1"},
         {"url": "https://ayomalinggo.blog/maling/sportzfy_proxy.php?type=events", "group": "USA LIVE 01"},
         {"url": "https://ayomalinggo.blog/maling/sportzfy_proxy.php?type=channels", "group": "USA LIVE 02"},
         {"url": "https://malingya.goblogtv.workers.dev/", "group": "LIVE AUTO II"},
