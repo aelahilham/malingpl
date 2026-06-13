@@ -7,14 +7,13 @@ import unicodedata
 from urllib.parse import quote, unquote
 import urllib3
 
-# Matiin warning SSL biar terminal lu gak spam merah-merah
+# Matiin warning SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
 SOURCE_CACHE = {}
-# SEMENTARA GUE BIKIN 5 DETIK BIAR LU GAMPANG NGETESNYA.
-# Kalau udah work, ubah lagi ke 300.
+# Masih 5 detik biar gampang ngetesnya
 CACHE_TTL = 5 
 
 def fetch_playlist(url):
@@ -24,19 +23,22 @@ def fetch_playlist(url):
     
     try:
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "*/*"
+            # Nyamar jadi Android IPTV Player tulen (ExoPlayer) biar gak kena blokir firewall provider
+            "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 11; SM-G998B Build/RP1A.200720.012) ExoPlayer.core/2.14.0",
+            "Accept": "*/*",
+            "Connection": "keep-alive"
         }
         resp = requests.get(url, headers=headers, timeout=15, verify=False)
         if resp.status_code == 200:
-            resp.encoding = 'utf-8-sig' # Otomatis buang karakter BOM
+            resp.encoding = 'utf-8-sig'
             SOURCE_CACHE[url] = {'data': resp.text, 'time': now}
             return resp.text
         else:
-            print(f"Gagal narik dari {url} - Status: {resp.status_code}")
+            print(f"Gagal narik dari {url} - Status Code: {resp.status_code}")
+            return None
     except Exception as e:
         print(f"Error pas narik {url}: {e}")
-    return None
+        return None
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -63,6 +65,7 @@ def get_playlist(path):
         {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"},
         {"url": "https://ayomalinggo.blog/maling/XXXX69/tvri.php", "group": "TVRI CHANNEL"},
         {"url": "https://ayomalinggo.blog/maling/tolol/1.php", "group": "SAWIT TV"}
+        # PASTIKAN PLAYLIST BARU LU UDAH DIMASUKIN KE SINI JUGA YA!
     ]
 
     merged_content = "#EXTM3U\n"
@@ -72,7 +75,11 @@ def get_playlist(path):
     
     for pl in playlists:
         playlist_text = fetch_playlist(pl["url"])
+        
+        # ---> FITUR BARU: Alarm kalau script diblokir provider
         if not playlist_text:
+            merged_content += f'#EXTINF:-1 tvg-logo="", ❌ GAGAL FETCH: {pl["group"]}\n'
+            merged_content += "http://localhost/dummy_error.m3u8\n"
             continue
             
         lines = playlist_text.splitlines()
@@ -145,29 +152,25 @@ def get_playlist(path):
                 ext_tags = []
                 stream_headers = ""
                 
-            # Nangkap metadata tambahan (PERTahankan KODIPROP asli utuh!)
+            # Nangkap KODIPROP dan tag lain utuh-utuh
             elif line.startswith("#") and current_extinf:
                 ext_tags.append(line)
                 
-            # Nangkap header yang kepisah kayak |Referer= biar tetep jalan
             elif line.startswith("|") and current_extinf:
                 stream_headers += line
                 
-            # Pas ketemu link video, satukan semua secara berurutan
+            # Nangkap link video
             elif not line.startswith("#") and current_extinf:
                 stream_url = line 
                 
-                # Jahit #EXTINF
+                # Susunannya dipastikan persis kayak raw data lu
                 merged_content += current_extinf + "\n"
                 
-                # Jahit KODIPROP / tag tambahan persis di bawah EXTINF
                 if ext_tags:
                     merged_content += "\n".join(ext_tags) + "\n"
                 
-                # Jahit link stream + header referer jadi SATU BARIS
                 merged_content += stream_url + stream_headers + "\n"
                 
-                # Kosongin buffer untuk channel selanjutnya
                 current_extinf = ""
                 ext_tags = []
                 stream_headers = ""
