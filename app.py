@@ -3,18 +3,19 @@ import requests
 import re
 import base64
 import time
+import datetime
 import unicodedata
 import traceback
+import os
 from urllib.parse import quote, unquote
 import urllib3
 
-# Matiin warning SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
 SOURCE_CACHE = {}
-# Bikin 0 dulu biar murni tanpa cache sama sekali pas lagi ngetes
+# Set ke 0 dulu biar lu gampang ngetes tanpa cache
 CACHE_TTL = 0 
 
 def fetch_playlist(url):
@@ -22,22 +23,31 @@ def fetch_playlist(url):
     if url in SOURCE_CACHE and (now - SOURCE_CACHE[url]['time'] < CACHE_TTL):
         return SOURCE_CACHE[url]['data']
     
+    # Kalo URL gak diawali http, kita anggap itu file lokal di komputer lu
+    if not url.startswith("http"):
+        try:
+            if os.path.exists(url):
+                with open(url, 'r', encoding='utf-8-sig') as f:
+                    return f.read()
+            else:
+                return f'#EXTINF:-1 group-title="DEBUG LOG", ❌ FILE LOKAL GAK KETEMU: {url}\nhttp://localhost/error.m3u8\n'
+        except Exception as e:
+            return f'#EXTINF:-1 group-title="DEBUG LOG", ❌ ERROR BACA FILE: {e}\nhttp://localhost/error.m3u8\n'
+
     try:
         headers = {
-            # Balik ke User-Agent awal yang terbukti jalan buat FolaPlay
             "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36",
             "Accept": "*/*"
         }
         resp = requests.get(url, headers=headers, timeout=15, verify=False)
         if resp.status_code == 200:
-            # Buang karakter BOM gaib tanpa maksa ganti encoding
             text = resp.text.lstrip('\ufeff') 
             SOURCE_CACHE[url] = {'data': text, 'time': now}
             return text
         else:
-            return f"#EXTINF:-1 group-title=\"DEBUG LOG\", ❌ HTTP ERROR {resp.status_code}: {url}\nhttp://localhost/error.m3u8"
+            return f'#EXTINF:-1 group-title="DEBUG LOG", ❌ HTTP ERROR {resp.status_code}: {url}\nhttp://localhost/error.m3u8\n'
     except Exception as e:
-        return f"#EXTINF:-1 group-title=\"DEBUG LOG\", ❌ GAGAL FETCH: {str(e)}\nhttp://localhost/error.m3u8"
+        return f'#EXTINF:-1 group-title="DEBUG LOG", ❌ GAGAL FETCH KONEKSI: {str(e)}\nhttp://localhost/error.m3u8\n'
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -61,19 +71,32 @@ def get_playlist(path):
             {"url": "https://ayomalinggo.blog/maling/TOKEN/sbs_m3u.php", "group": "WORLD CUP 2026"},
             {"url": "https://ayomalinggo.blog/maling/XXXX69/ch.php", "group": "TV CHANNEL"},
             {"url": "https://ayomalinggo.blog/maling/XXXX69/event.php", "group": "EVENT"}
-            # ↓↓↓ TARUH LINK M3U TNT SPORTS LU DI BAWAH SINI ↓↓↓
-            # {"url": "ISI_LINK_M3U_TNT_LU_DISINI", "group": "TNT SPORTS"}
+            # PASTIKAN MASUKIN LINK ATAU PATH FILE TNT LU DI BAWAH SINI!
+            # {"url": "C:/folder/sportzfy_proxy.php.txt", "group": "TNT SPORTS"}
         ]
 
         merged_content = "#EXTM3U\n"
+        
+        # Indikator di Player biar ketahuan ini hasil script paling baru atau bukan
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        merged_content += f'#EXTINF:-1 group-title="SYSTEM LOG", 🟢 SCRIPT UPDATE: {current_time}\nhttp://localhost/status.m3u8\n'
         
         group_counts = {}
         group_versions = {}
         
         for pl in playlists:
-            playlist_text = fetch_playlist(pl["url"])
+            # Amankan kalau lu lupa nulis "group"
+            pl_url = pl.get("url", "")
+            pl_group = pl.get("group", "TANPA GRUP")
             
-            if not playlist_text:
+            if not pl_url:
+                continue
+                
+            playlist_text = fetch_playlist(pl_url)
+            
+            # Kalau ke-blokir Cloudflare atau HTML doang
+            if not playlist_text or "#EXTINF" not in playlist_text:
+                merged_content += f'#EXTINF:-1 group-title="DEBUG LOG", ❌ DIBLOKIR PROVIDER: {pl_group}\nhttp://localhost/error.m3u8\n'
                 continue
                 
             lines = playlist_text.splitlines()
@@ -91,7 +114,6 @@ def get_playlist(path):
                     
                     if line.startswith("#EXTINF"):
                         
-                        # 1. Bersihin koma nyasar
                         if line.count(',') > 1:
                             attrs, name = line.rsplit(',', 1)
                             attrs = attrs.replace('",', '" ')
@@ -99,7 +121,6 @@ def get_playlist(path):
                             attrs = re.sub(r'^(#EXTINF:[-0-9]+),', r'\1 ', attrs)
                             line = f"{attrs},{name}"
                         
-                        # 2. Proses Nama, Karakter Gaib, dan Duplikasi Grup
                         if "," in line:
                             attrs, name = line.rsplit(',', 1)
                             
@@ -110,11 +131,11 @@ def get_playlist(path):
                             if match_group:
                                 base_group_name = match_group.group(1).upper()
                             else:
-                                base_group_name = pl["group"].upper()
+                                base_group_name = pl_group.upper()
                             
                             base_group_name = "".join(c for c in base_group_name if unicodedata.category(c) not in ['Cc', 'Cf', 'Cn', 'Co', 'Cs'])
                             
-                            group_key = (pl["url"], base_group_name)
+                            group_key = (pl_url, base_group_name)
                             
                             if group_key not in group_versions:
                                 if base_group_name not in group_counts:
@@ -133,10 +154,9 @@ def get_playlist(path):
                                 
                             line = f"{attrs},{name}"
                         
-                        # 3. Ekstrak logo Base64 
                         channel_name_for_check = line.split(",")[-1].strip().lower()
                         if re.search(r'tvg-logo=["\']data:image/', line, flags=re.IGNORECASE):
-                            safe_url = quote(pl["url"])
+                            safe_url = quote(pl_url)
                             safe_ch = quote(channel_name_for_check)
                             new_logo_url = f"{request.host_url}logo?pl_url={safe_url}&ch={safe_ch}"
                             line = re.sub(r'tvg-logo=["\']data:image/[^"\']+["\']', f'tvg-logo="{new_logo_url}"', line, flags=re.IGNORECASE)
@@ -145,15 +165,12 @@ def get_playlist(path):
                         ext_tags = []
                         stream_headers = ""
                         
-                    # Nangkap KODIPROP dan tag referensi lain (Utuh!)
                     elif line.startswith("#") and current_extinf:
                         ext_tags.append(line)
                         
-                    # Nangkap header yang kepisah (kayak |Referer=)
                     elif line.startswith("|") and current_extinf:
                         stream_headers += line
                         
-                    # Susun URL Video Akhir
                     elif not line.startswith("#") and current_extinf:
                         stream_url = line 
                         
@@ -162,47 +179,5 @@ def get_playlist(path):
                             merged_content += "\n".join(ext_tags) + "\n"
                         merged_content += stream_url + stream_headers + "\n"
                         
-                        # Reset
                         current_extinf = ""
                         ext_tags = []
-                        stream_headers = ""
-                        
-                except Exception as loop_err:
-                    # Kalau ada baris yang bikin error, gak bakal merusak full playlist
-                    pass
-
-        # Balikkan hasil dengan header Anti-Cache dan tipe x-mpegURL
-        resp = Response(merged_content, mimetype='application/x-mpegURL; charset=utf-8')
-        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-        return resp
-
-    except Exception as e:
-        # INI PENTING: Kalau Python beneran Crash, lu bakal dapet list ini di Player TV lu!
-        error_msg = traceback.format_exc().replace('\n', ' || ')
-        crash_m3u = f"#EXTM3U\n#EXTINF:-1 group-title=\"💥 SCRIPT CRASH\", LOG: {str(e)}\nhttp://localhost/crash.m3u8\n"
-        crash_m3u += f"#EXTINF:-1 group-title=\"💥 SCRIPT CRASH\", {error_msg}\nhttp://localhost/crash2.m3u8\n"
-        
-        resp = Response(crash_m3u, mimetype='application/x-mpegURL; charset=utf-8')
-        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-        return resp
-
-@app.route('/logo')
-def serve_logo():
-    # ... (Bagian logo tetap sama, tidak disentuh biar aman) ...
-    pl_url = request.args.get('pl_url')
-    channel_name = request.args.get('ch')
-    if not pl_url or not channel_name: return abort(400)
-    text = fetch_playlist(unquote(pl_url))
-    if not text: return abort(404)
-    lines = text.splitlines()
-    for line in lines:
-        if line.startswith("#EXTINF"):
-            current_ch = line.split(",")[-1].strip().lower() if "," in line else line.lower()
-            if current_ch == channel_name.lower():
-                match = re.search(r'tvg-logo=["\']data:image/([^;]+);base64,([^"\']+)["\']', line, flags=re.IGNORECASE)
-                if match:
-                    try:
-                        return Response(base64.b64decode(match.group(2)), mimetype=f'image/{match.group(1)}', headers={'Cache-Control': 'public, max-age=2592000, s-maxage=2592000'})
-                    except Exception: pass
-                break
-    return abort(404)
